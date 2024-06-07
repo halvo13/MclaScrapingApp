@@ -1,0 +1,100 @@
+from flask import Flask, request, jsonify
+import requests
+from bs4 import BeautifulSoup
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+def scrape_team_names():
+    url = 'https://mcla.us/teams'
+
+    # Send an HTTP GET request
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        # Parse HTML content
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Find HTML elements containing team names
+        team_links = soup.find_all('a', href=lambda href: href and '/team/' in href)
+        team_names = [link['href'].split("/team/")[1].split("/")[0] for link in team_links]
+        unique_team_names = list(set(team_names))  # Removing duplicates
+        sorted_team_names = sorted(unique_team_names)
+
+        return sorted_team_names
+    else:
+        return []
+
+@app.route('/teams', methods=['GET'])
+def get_teams():
+    teams = scrape_team_names()
+    return jsonify({'teams': teams})
+
+
+
+
+@app.route('/players', methods=['GET'])
+def get_players():
+    team = request.args.get('team')
+    year = request.args.get('year')
+
+    # URL of the page with player names and stats
+    url = f'https://mcla.us/team/{team}/{year}/stats.html'
+
+    # Send an HTTP GET request
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        # Parse HTML content
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Locate the HTML elements containing player names and stats
+        # Assuming the second table is the one you want to scrape
+        second_table = soup.find_all('table')[1]  # Index 1 corresponds to the second table
+
+        # Extract player names and stats
+        player_data = []
+        rows = second_table.find_all('tr')
+        for row in rows[1:]:  # Skip the header row
+            columns = row.find_all('td')
+            number = columns[0].text.strip()
+            player_name = columns[1].text.strip()
+            lastName, firstName = player_name.split(', ')
+            player_year = columns[2].text.strip()
+            player_position = columns[3].text.strip()
+            games_played = columns[4].text.strip()
+            groundBalls = columns[5].text.strip()
+            goals = columns[6].text.strip()
+            assists = columns[7].text.strip()
+            points = columns[8].text.strip()
+            faceoff = columns[9].text.strip()
+            assistPerGame = columns[10].text.strip()
+            goalsPerGame = columns[11].text.strip()
+            pointsPerGame = columns[12].text.strip()
+            # Add additional stats as needed
+            player_data.append({
+                'Number': number,
+                'Name': player_name,
+                'FirstName': firstName,
+                'LastName': lastName,
+                'Year': player_year,
+                'Position': player_position,
+                'GamesPlayed': games_played,
+                'GroundBalls': groundBalls,
+                'Goals': goals,
+                'Assists': assists,
+                'Points': points,
+                'Faceoff': faceoff,
+                'GoalsPerGame': goalsPerGame,
+                'AssistsPerGame': assistPerGame,
+                'PointsPerGame': pointsPerGame,
+            })
+
+        return jsonify(player_data)
+
+    else:
+        return jsonify({'error': 'Failed to fetch player stats'})
+
+if __name__ == '__main__':
+    app.run(debug=True)
