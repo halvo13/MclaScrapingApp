@@ -39,23 +39,27 @@
 
 /* Table stuff */
 .table-container {
-  margin: 20px;
+  margin-top: 20px;
+  overflow-x: auto;
 }
 
 table {
-  border-collapse: collapse;
   width: 100%;
+  border-collapse: collapse;
 }
 
 th,
 td {
-  padding: 8px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
   text-align: left;
-  border-bottom: 1px solid #ddd;
 }
 
 th {
-  background-color: #f2f2f2;
+  background-color: #f4f4f4;
+  position: sticky;
+  top: 0; /* Stick the header to the top of the container */
+  z-index: 1; /* Ensure the header stays on top of other content */
 }
 
 tr:nth-child(even) {
